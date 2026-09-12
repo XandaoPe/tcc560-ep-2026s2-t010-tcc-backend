@@ -26,7 +26,6 @@ export const getEventsHistory = async (req: Request, res: Response): Promise<voi
         let query: any = {};
 
         const now = new Date();
-        // Padrão: Última 1 hora se nenhum filtro ativo for especificado
         if (timeRange === '1h' || (!zone && !severity && !eventCode && !search && !timeRange)) {
             const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
             query.createdAt = { $gte: oneHourAgo };
@@ -37,7 +36,6 @@ export const getEventsHistory = async (req: Request, res: Response): Promise<voi
             const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             query.createdAt = { $gte: sevenDaysAgo };
         }
-        // Se timeRange === 'all', não restringe por data
 
         if (zone) {
             query.zone = zone;
@@ -62,5 +60,33 @@ export const getEventsHistory = async (req: Request, res: Response): Promise<voi
         res.status(200).json(events);
     } catch (error: any) {
         res.status(500).json({ error: error.message || 'Erro ao buscar histórico.' });
+    }
+};
+
+export const deleteThermalEvent = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const deleted = await ThermalEventModel.findByIdAndDelete(id);
+        if (!deleted) {
+            res.status(404).json({ error: 'Evento não encontrado.' });
+            return;
+        }
+        res.status(200).json({ message: 'Evento excluído com sucesso.' });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message || 'Erro ao excluir evento.' });
+    }
+};
+
+export const deleteThermalEventsBatch = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            res.status(400).json({ error: 'Nenhum ID fornecido para exclusão.' });
+            return;
+        }
+        await ThermalEventModel.deleteMany({ _id: { $in: ids } });
+        res.status(200).json({ message: 'Eventos excluídos com sucesso.' });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message || 'Erro ao excluir eventos em lote.' });
     }
 };
